@@ -4,6 +4,25 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// --> Corrigido para Kotlin:
+import java.util.Properties
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(keystorePropertiesFile.inputStream())
+
+    println("==== KEY PROPERTIES DEBUG ====")
+    println("keyAlias: ${keystoreProperties["keyAlias"]}")
+    println("keyPassword: ${keystoreProperties["keyPassword"]}")
+    println("storeFile: ${keystoreProperties["storeFile"]}")
+    println("storePassword: ${keystoreProperties["storePassword"]}")
+    println("===============================")
+} else {
+    println("Arquivo key.properties NÃO encontrado!")
+}
+
+
 android {
     namespace = "com.ez1.nativabc"
     compileSdk = flutter.compileSdkVersion
@@ -28,9 +47,25 @@ android {
         jvmTarget = "1.8"
     }
 
+    signingConfigs {
+    create("release") {
+        keyAlias = keystoreProperties["keyAlias"] as? String ?: ""
+        keyPassword = keystoreProperties["keyPassword"] as? String ?: ""
+        storeFile = file(keystoreProperties["storeFile"] as? String ?: "")
+        storePassword = keystoreProperties["storePassword"] as? String ?: ""
+    }
+}
+
+
     buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
