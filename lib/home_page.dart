@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:audio_service/audio_service.dart';
@@ -19,13 +20,13 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Inicializa o player de vídeo em loop
-    _bgController = VideoPlayerController.asset('assets/bg.mp4')
-      ..setLooping(true)
-      ..initialize().then((_) {
-        setState(() {});
-        _bgController.play();
-      });
+    _bgController =
+        VideoPlayerController.asset('assets/bg.mp4')
+          ..setLooping(true)
+          ..initialize().then((_) {
+            setState(() {});
+            _bgController.play();
+          });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkForUpdate(context);
@@ -43,20 +44,28 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Vídeo de fundo
-          if (_bgController.value.isInitialized)
-            Positioned.fill(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _bgController.value.size.width,
-                  height: _bgController.value.size.height,
-                  child: VideoPlayer(_bgController),
+          if (Platform.isIOS)
+            if (_bgController.value.isInitialized)
+              Positioned.fill(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _bgController.value.size.width,
+                    height: _bgController.value.size.height,
+                    child: VideoPlayer(_bgController),
+                  ),
                 ),
-              ),
-            )
+              )
+            else
+              Container(color: Colors.black)
           else
-            Container(color: Colors.black),
+            // Fundo com imagem (PNG) para Android
+            Positioned.fill(
+              child: Image.asset(
+                'assets/fundo.png', // <- aqui coloca seu .png
+                fit: BoxFit.cover,
+              ),
+            ),
 
           SafeArea(
             child: Column(
@@ -65,31 +74,38 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    IconButton(
-                      icon: FaIcon(
-                        FontAwesomeIcons.whatsapp,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      onPressed: () => launchUrlString(
-                        'https://wa.me/559981069341',
-                        mode: LaunchMode.externalApplication,
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: AnimatedButton(
+                        onTap:
+                            () => launchUrlString(
+                              'https://wa.me/559981069341',
+                              mode: LaunchMode.externalApplication,
+                            ),
+                        child: FaIcon(
+                          FontAwesomeIcons.whatsapp,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                     ),
                   ],
                 ),
 
                 // Conteúdo central: logo, controles, redes e texto
-                Expanded(
+                Flexible(
+                  fit: FlexFit.loose,
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Logo
-                        Image.asset(
-                          'assets/logo.png',
-                          width: 240,
-                          height: 240,
+                        SizedBox(
+                          width: 200,
+                          height: 200,
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: Image.asset('assets/logo.png'),
+                          ),
                         ),
 
                         const SizedBox(height: 24),
@@ -98,35 +114,49 @@ class _HomePageState extends State<HomePage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            IconButton(
-                              icon: Icon(Icons.volume_down,
-                                  size: 36, color: Colors.white),
-                              onPressed: () => widget.audioHandler
-                                  .customAction('volumeDown'),
+                            AnimatedButton(
+                              onTap:
+                                  () => widget.audioHandler.customAction(
+                                    'volumeDown',
+                                  ),
+                              child: Icon(
+                                Icons.volume_down,
+                                size: 36,
+                                color: Colors.white,
+                              ),
                             ),
+                            const SizedBox(width: 12),
                             StreamBuilder<PlaybackState>(
                               stream: widget.audioHandler.playbackState,
                               builder: (_, snap) {
                                 final playing = snap.data?.playing ?? false;
-                                return IconButton(
-                                  icon: Icon(
+                                return AnimatedButton(
+                                  onTap:
+                                      () =>
+                                          playing
+                                              ? widget.audioHandler.pause()
+                                              : widget.audioHandler.play(),
+                                  child: Icon(
                                     playing
                                         ? Icons.pause_circle_filled
                                         : Icons.play_circle_filled,
                                     size: 64,
                                     color: Colors.white,
                                   ),
-                                  onPressed: () => playing
-                                      ? widget.audioHandler.pause()
-                                      : widget.audioHandler.play(),
                                 );
                               },
                             ),
-                            IconButton(
-                              icon: Icon(Icons.volume_up,
-                                  size: 36, color: Colors.white),
-                              onPressed: () => widget.audioHandler
-                                  .customAction('volumeUp'),
+                            const SizedBox(width: 12),
+                            AnimatedButton(
+                              onTap:
+                                  () => widget.audioHandler.customAction(
+                                    'volumeUp',
+                                  ),
+                              child: Icon(
+                                Icons.volume_up,
+                                size: 36,
+                                color: Colors.white,
+                              ),
                             ),
                           ],
                         ),
@@ -137,20 +167,27 @@ class _HomePageState extends State<HomePage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _socialButton(FontAwesomeIcons.facebook,
-                                'https://www.instagram.com/nativafmbdc'),
-                            _socialButton(FontAwesomeIcons.instagram,
-                                'https://www.instagram.com/nativafmbdc/'),
-                            _socialButton(FontAwesomeIcons.youtube,
-                                'https://www.youtube.com/@nativafmbarradocorda'),
-                            _socialButton(FontAwesomeIcons.twitter,
-                                'https://www.instagram.com/nativafmbdc'),
+                            _socialButton(
+                              FontAwesomeIcons.facebook,
+                              'https://www.instagram.com/nativafmbdc',
+                            ),
+                            _socialButton(
+                              FontAwesomeIcons.instagram,
+                              'https://www.instagram.com/nativafmbdc/',
+                            ),
+                            _socialButton(
+                              FontAwesomeIcons.youtube,
+                              'https://www.youtube.com/@nativafmbarradocorda',
+                            ),
+                            _socialButton(
+                              FontAwesomeIcons.twitter,
+                              'https://www.instagram.com/nativafmbdc',
+                            ),
                           ],
                         ),
 
                         const SizedBox(height: 16),
 
-                        // Texto de localização
                         const Text(
                           'Tocando diretamente de:\nBarra do Corda, Maranhão, Brasil',
                           textAlign: TextAlign.center,
@@ -169,12 +206,8 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // E-mail com mailto:
-                        FloatingActionButton(
-                          heroTag: 'email',
-                          mini: true,
-                          child: FaIcon(FontAwesomeIcons.envelope, size: 20),
-                          onPressed: () async {
+                        AnimatedButton(
+                          onTap: () async {
                             const emailUri =
                                 'mailto:contato@nativafmbdc.com.br';
                             if (await canLaunchUrlString(emailUri)) {
@@ -186,30 +219,54 @@ class _HomePageState extends State<HomePage> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Não foi possível abrir o app de e-mail.'),
+                                    'Não foi possível abrir o app de e-mail.',
+                                  ),
                                 ),
                               );
                             }
                           },
-                        ),
-                        const SizedBox(height: 12),
-                        FloatingActionButton(
-                          heroTag: 'site',
-                          mini: true,
-                          child: FaIcon(FontAwesomeIcons.globe, size: 20),
-                          onPressed: () => launchUrlString(
-                            'https://nativafmbdc.com.br/',
-                            mode: LaunchMode.externalApplication,
+                          child: CircleAvatar(
+                            backgroundColor: Colors.white,
+                            radius: 22,
+                            child: FaIcon(
+                              FontAwesomeIcons.envelope,
+                              size: 20,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        FloatingActionButton(
-                          heroTag: 'webcam',
-                          mini: true,
-                          child: FaIcon(FontAwesomeIcons.camera, size: 20),
-                          onPressed: () => launchUrlString(
-                            'https://nativafmbdc.com.br/',
-                            mode: LaunchMode.externalApplication,
+                        AnimatedButton(
+                          onTap:
+                              () => launchUrlString(
+                                'https://nativafmbdc.com.br/',
+                                mode: LaunchMode.externalApplication,
+                              ),
+                          child: CircleAvatar(
+                            backgroundColor: Colors.white,
+                            radius: 22,
+                            child: FaIcon(
+                              FontAwesomeIcons.globe,
+                              size: 20,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        AnimatedButton(
+                          onTap:
+                              () => launchUrlString(
+                                'https://nativafmbdc.com.br/',
+                                mode: LaunchMode.externalApplication,
+                              ),
+                          child: CircleAvatar(
+                            backgroundColor: Colors.white,
+                            radius: 22,
+                            child: FaIcon(
+                              FontAwesomeIcons.camera,
+                              size: 20,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ],
@@ -225,12 +282,68 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _socialButton(IconData icon, String url) {
-    return IconButton(
-      icon: FaIcon(icon, color: Colors.white, size: 32),
-      onPressed: () => launchUrlString(
-        url,
-        mode: LaunchMode.externalApplication,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: AnimatedButton(
+        onTap: () => launchUrlString(url, mode: LaunchMode.externalApplication),
+        child: FaIcon(icon, color: Colors.white, size: 32),
       ),
+    );
+  }
+}
+
+/// Widget que adiciona animação de toque (escala)
+class AnimatedButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const AnimatedButton({super.key, required this.child, required this.onTap});
+
+  @override
+  State<AnimatedButton> createState() => _AnimatedButtonState();
+}
+
+class _AnimatedButtonState extends State<AnimatedButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      lowerBound: 0.95,
+      upperBound: 1.0,
+      vsync: this,
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    _controller.reverse();
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    _controller.forward();
+  }
+
+  void _onTapCancel() {
+    _controller.forward();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      child: ScaleTransition(scale: _controller, child: widget.child),
     );
   }
 }

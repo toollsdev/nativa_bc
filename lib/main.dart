@@ -2,19 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
 import 'audio_handler.dart';
 import 'home_page.dart';
+import 'dart:io'; // <--- IMPORTANTE
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final handler = await AudioService.init(
-    builder: () => RadioAudioHandler(),
-    config: AudioServiceConfig(
-      androidNotificationChannelId: 'radio_channel',
-      androidNotificationChannelName: 'Rádio ao Vivo',
-      androidNotificationOngoing: true,
-    ),
-  );
+  
+  late AudioHandler handler;
+
+  if (Platform.isAndroid) {
+    // Android: Cria o player direto sem AudioService
+    handler = RadioAudioHandler();
+  } else {
+    // iOS: Usa AudioService normalmente
+    handler = await AudioService.init(
+      builder: () => RadioAudioHandler(),
+      config: AudioServiceConfig(
+        androidNotificationChannelId: 'radio_channel',
+        androidNotificationChannelName: 'Rádio ao Vivo',
+        androidNotificationOngoing: true,
+      ),
+    );
+  }
+
   runApp(MyApp(audioHandler: handler));
 }
+
 
 class MyApp extends StatelessWidget {
   final AudioHandler audioHandler;
