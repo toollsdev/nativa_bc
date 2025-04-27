@@ -24,7 +24,7 @@ Future<void> checkForUpdate(BuildContext context) async {
     // 2) Busca o JSON no seu servidor, adicionando um ts para evitar cache
     final ts = DateTime.now().millisecondsSinceEpoch;
     final url =
-        'https://ez1fm.com/aplicativos/nativabc/version.php' +
+        'https://ez1fm.com/aplicativos/version.php' +
         '?ts=$ts&aplicativo=nativa_bc';
     final response = await http.get(Uri.parse(url));
 
