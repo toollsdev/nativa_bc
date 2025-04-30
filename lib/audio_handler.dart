@@ -1,33 +1,38 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:http/http.dart' as http;
 
 class RadioAudioHandler extends BaseAudioHandler with SeekHandler {
   final _player = AudioPlayer();
-  static const _radioUrl = 'https://azura.ez1fm.com/listen/nativa_fm_barra_do_corda/radio.mp3';
+  static const _radioEndpoint = 'https://ez1fm.com/aplicativos/links.php?stream=nativa_bc';
 
   RadioAudioHandler() {
     _init();
   }
 
   Future<void> _init() async {
-    // 1) Configure o audio session
     final session = await AudioSession.instance;
     await session.configure(AudioSessionConfiguration.music());
 
-    // 2) Informe os metadados do stream
     mediaItem.add(
       MediaItem(
-        id: _radioUrl,
-        // título que aparece na lock-screen / notificação
+        id: _radioEndpoint,
         title: 'Nativa FM 105.9',
         album: 'Rádio ao Vivo',
         artUri: Uri.parse('https://i.imgur.com/g9vWyXM.png'),
       ),
     );
 
-    // 3) Carregue e comece a escutar os eventos de playback
-    await _player.setUrl(_radioUrl);
+    // Carrega o stream
+    try {
+      final resolved = await http.read(Uri.parse(_radioEndpoint));
+      final streamUrl = resolved.trim();
+      await _player.setUrl(streamUrl);
+    } catch (e) {
+      print('Erro ao carregar stream: $e');
+    }
+
     _player.playbackEventStream.listen(_broadcastState);
   }
 
@@ -63,7 +68,20 @@ class RadioAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    if (_player.processingState == ProcessingState.idle ||
+        _player.processingState == ProcessingState.completed) {
+      try {
+        final resolved = await http.read(Uri.parse(_radioEndpoint));
+        final streamUrl = resolved.trim();
+        await _player.setUrl(streamUrl);
+      } catch (e) {
+        print('Erro ao tentar tocar novamente: $e');
+        return;
+      }
+    }
+    await _player.play();
+  }
 
   @override
   Future<void> pause() => _player.pause();
