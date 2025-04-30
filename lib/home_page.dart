@@ -5,6 +5,8 @@ import 'package:audio_service/audio_service.dart';
 import 'update_service.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'config/app_config.dart';
 
 class HomePage extends StatefulWidget {
   final AudioHandler audioHandler;
@@ -15,21 +17,52 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  late Stream<ConnectivityResult> _connectivityStream;
+  bool _semConexaoExibido = false;
   late VideoPlayerController _bgController;
 
   @override
   void initState() {
     super.initState();
+
     _bgController =
         VideoPlayerController.asset('assets/bg.mp4')
           ..setLooping(true)
           ..initialize().then((_) {
-            setState(() {});
-            _bgController.play();
+            if (mounted) {
+              setState(() {});
+              _bgController.play();
+            }
           });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkForUpdate(context);
+      _monitorarConexao();
+    });
+  }
+
+  void _monitorarConexao() {
+    _connectivityStream = Connectivity().onConnectivityChanged;
+    _connectivityStream.listen((result) {
+      if (!mounted) return;
+
+      final semConexao = result == ConnectivityResult.none;
+
+      if (semConexao && !_semConexaoExibido) {
+        _semConexaoExibido = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Você está sem conexão. Tente novamente mais tarde!'),
+            backgroundColor: Colors.red,
+            duration: Duration(days: 1),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(16),
+          ),
+        );
+      } else if (!semConexao && _semConexaoExibido) {
+        _semConexaoExibido = false;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
     });
   }
 
@@ -59,18 +92,13 @@ class _HomePageState extends State<HomePage> {
             else
               Container(color: Colors.black)
           else
-            // Fundo com imagem (PNG) para Android
             Positioned.fill(
-              child: Image.asset(
-                'assets/fundo.png', // <- aqui coloca seu .png
-                fit: BoxFit.cover,
-              ),
+              child: Image.asset('assets/fundo.png', fit: BoxFit.cover),
             ),
 
           SafeArea(
             child: Column(
               children: [
-                // AppBar customizado
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -79,10 +107,10 @@ class _HomePageState extends State<HomePage> {
                       child: AnimatedButton(
                         onTap:
                             () => launchUrlString(
-                              'https://wa.me/559981069341',
+                              AppConfig.whatsapp,
                               mode: LaunchMode.externalApplication,
                             ),
-                        child: FaIcon(
+                        child: const FaIcon(
                           FontAwesomeIcons.whatsapp,
                           color: Colors.white,
                           size: 28,
@@ -92,7 +120,6 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
 
-                // Conteúdo central: logo, controles, redes e texto
                 Flexible(
                   fit: FlexFit.loose,
                   child: Center(
@@ -107,10 +134,7 @@ class _HomePageState extends State<HomePage> {
                             child: Image.asset('assets/logo.png'),
                           ),
                         ),
-
                         const SizedBox(height: 24),
-
-                        // Controles de volume + play/pause
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -119,7 +143,7 @@ class _HomePageState extends State<HomePage> {
                                   () => widget.audioHandler.customAction(
                                     'volumeDown',
                                   ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.volume_down,
                                 size: 36,
                                 color: Colors.white,
@@ -152,7 +176,7 @@ class _HomePageState extends State<HomePage> {
                                   () => widget.audioHandler.customAction(
                                     'volumeUp',
                                   ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.volume_up,
                                 size: 36,
                                 color: Colors.white,
@@ -160,36 +184,31 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 24),
-
-                        // Botões de redes sociais
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _socialButton(
                               FontAwesomeIcons.facebook,
-                              'https://www.instagram.com/nativafmbdc',
+                              AppConfig.redesSociais['facebook']!,
                             ),
                             _socialButton(
                               FontAwesomeIcons.instagram,
-                              'https://www.instagram.com/nativafmbdc/',
+                              AppConfig.redesSociais['instagram']!,
                             ),
                             _socialButton(
                               FontAwesomeIcons.youtube,
-                              'https://www.youtube.com/@nativafmbarradocorda',
+                              AppConfig.redesSociais['youtube']!,
                             ),
                             _socialButton(
                               FontAwesomeIcons.twitter,
-                              'https://www.instagram.com/nativafmbdc',
+                              AppConfig.redesSociais['twitter']!,
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 16),
-
-                        const Text(
-                          'Tocando diretamente de:\nBarra do Corda, Maranhão, Brasil',
+                        Text(
+                          'Tocando diretamente de:\n${AppConfig.cidade}',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.white70),
                         ),
@@ -198,7 +217,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
 
-                // Botões inferiores (e-mail, site e webcam)
                 Padding(
                   padding: const EdgeInsets.only(right: 16, bottom: 16),
                   child: Align(
@@ -206,68 +224,19 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        AnimatedButton(
-                          onTap: () async {
-                            const emailUri =
-                                'mailto:contato@nativafmbdc.com.br';
-                            if (await canLaunchUrlString(emailUri)) {
-                              await launchUrlString(
-                                emailUri,
-                                mode: LaunchMode.externalApplication,
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Não foi possível abrir o app de e-mail.',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          child: CircleAvatar(
-                            backgroundColor: Colors.white,
-                            radius: 22,
-                            child: FaIcon(
-                              FontAwesomeIcons.envelope,
-                              size: 20,
-                              color: Colors.black,
-                            ),
-                          ),
+                        _actionButton(
+                          icon: FontAwesomeIcons.envelope,
+                          url: AppConfig.email,
                         ),
                         const SizedBox(height: 12),
-                        AnimatedButton(
-                          onTap:
-                              () => launchUrlString(
-                                'https://nativafmbdc.com.br/',
-                                mode: LaunchMode.externalApplication,
-                              ),
-                          child: CircleAvatar(
-                            backgroundColor: Colors.white,
-                            radius: 22,
-                            child: FaIcon(
-                              FontAwesomeIcons.globe,
-                              size: 20,
-                              color: Colors.black,
-                            ),
-                          ),
+                        _actionButton(
+                          icon: FontAwesomeIcons.globe,
+                          url: AppConfig.site,
                         ),
                         const SizedBox(height: 12),
-                        AnimatedButton(
-                          onTap:
-                              () => launchUrlString(
-                                'https://nativafmbdc.com.br/',
-                                mode: LaunchMode.externalApplication,
-                              ),
-                          child: CircleAvatar(
-                            backgroundColor: Colors.white,
-                            radius: 22,
-                            child: FaIcon(
-                              FontAwesomeIcons.camera,
-                              size: 20,
-                              color: Colors.black,
-                            ),
-                          ),
+                        _actionButton(
+                          icon: FontAwesomeIcons.camera,
+                          url: AppConfig.camera,
                         ),
                       ],
                     ),
@@ -290,9 +259,28 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Widget _actionButton({required IconData icon, required String url}) {
+    return AnimatedButton(
+      onTap: () async {
+        if (await canLaunchUrlString(url)) {
+          await launchUrlString(url, mode: LaunchMode.externalApplication);
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Não foi possível abrir o link.')),
+          );
+        }
+      },
+      child: CircleAvatar(
+        backgroundColor: Colors.white,
+        radius: 22,
+        child: FaIcon(icon, size: 20, color: Colors.black),
+      ),
+    );
+  }
 }
 
-/// Widget que adiciona animação de toque (escala)
 class AnimatedButton extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
@@ -324,17 +312,9 @@ class _AnimatedButtonState extends State<AnimatedButton>
     super.dispose();
   }
 
-  void _onTapDown(TapDownDetails details) {
-    _controller.reverse();
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    _controller.forward();
-  }
-
-  void _onTapCancel() {
-    _controller.forward();
-  }
+  void _onTapDown(TapDownDetails details) => _controller.reverse();
+  void _onTapUp(TapUpDetails details) => _controller.forward();
+  void _onTapCancel() => _controller.forward();
 
   @override
   Widget build(BuildContext context) {

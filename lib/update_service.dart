@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher_string.dart';
+import 'config/app_config.dart';
 
-/// Verifica se a versão `a` (ex: "1.4.0") é mais nova que `b` ("1.3.2")
 bool _isNewerVersion(String a, String b) {
   final av = a.split('.').map(int.parse).toList();
   final bv = b.split('.').map(int.parse).toList();
@@ -21,8 +21,7 @@ Future<void> checkForUpdate(BuildContext context) async {
     final info = await PackageInfo.fromPlatform();
     final currentVersion = info.version;
 
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final versionUrl = 'https://ez1fm.com/aplicativos/version.php?ts=$ts&aplicativo=nativa_bc';
+    final versionUrl = AppConfig.linkVersaoApi();
     final versionResponse = await http.get(Uri.parse(versionUrl));
 
     if (versionResponse.statusCode != 200) return;
@@ -34,9 +33,8 @@ Future<void> checkForUpdate(BuildContext context) async {
     if (_isNewerVersion(latestVersion, currentVersion)) {
       if (!context.mounted) return;
 
-      // Detecta plataforma e busca link da loja
       final plataforma = Platform.isAndroid ? 'android' : 'ios';
-      final lojaUrl = 'https://ez1fm.com/aplicativos/links.php?loja=$plataforma&app=nativa_bc';
+      final lojaUrl = AppConfig.linkVersao(plataforma);
       final lojaResponse = await http.get(Uri.parse(lojaUrl));
 
       if (lojaResponse.statusCode != 200) return;
@@ -64,10 +62,6 @@ Future<void> checkForUpdate(BuildContext context) async {
                   updateUrl,
                   mode: LaunchMode.externalApplication,
                 );
-                if (mandatory) {
-                  // Opcional: encerra o app
-                  // SystemNavigator.pop();
-                }
               },
               child: const Text('Atualizar'),
             ),
@@ -76,6 +70,6 @@ Future<void> checkForUpdate(BuildContext context) async {
       );
     }
   } catch (e) {
-    debugPrint('Erro ao checar atualização: $e');
+    debugPrint('Erro ao checar atualização: \$e');
   }
 }

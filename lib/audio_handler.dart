@@ -2,10 +2,11 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:http/http.dart' as http;
+import 'config/app_config.dart';
 
 class RadioAudioHandler extends BaseAudioHandler with SeekHandler {
   final _player = AudioPlayer();
-  static const _radioEndpoint = 'https://ez1fm.com/aplicativos/links.php?stream=nativa_bc';
+  static const _radioEndpoint = AppConfig.streamApi;
 
   RadioAudioHandler() {
     _init();
@@ -18,19 +19,18 @@ class RadioAudioHandler extends BaseAudioHandler with SeekHandler {
     mediaItem.add(
       MediaItem(
         id: _radioEndpoint,
-        title: 'Nativa FM 105.9',
+        title: AppConfig.tituloPlayer,
         album: 'Rádio ao Vivo',
-        artUri: Uri.parse('https://i.imgur.com/g9vWyXM.png'),
+        artUri: Uri.parse(AppConfig.logoUrl),
       ),
     );
 
-    // Carrega o stream
     try {
       final resolved = await http.read(Uri.parse(_radioEndpoint));
       final streamUrl = resolved.trim();
       await _player.setUrl(streamUrl);
     } catch (e) {
-      print('Erro ao carregar stream: $e');
+      return;
     }
 
     _player.playbackEventStream.listen(_broadcastState);
@@ -76,7 +76,6 @@ class RadioAudioHandler extends BaseAudioHandler with SeekHandler {
         final streamUrl = resolved.trim();
         await _player.setUrl(streamUrl);
       } catch (e) {
-        print('Erro ao tentar tocar novamente: $e');
         return;
       }
     }
@@ -84,7 +83,7 @@ class RadioAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() => _player.stop();
 
   @override
   Future<void> stop() async {

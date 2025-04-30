@@ -28,6 +28,7 @@ dependencies:
   package_info_plus: ^8.3.0
   font_awesome_flutter: ^10.1.0
   video_player: ^2.5.1
+  connectivity_plus: ^5.0.2
 
   # HTTP (alinhado com todas as dependências acima)
   http: ^1.3.0
