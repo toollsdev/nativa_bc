@@ -20,7 +20,9 @@ class AppConfig {
     'youtube': 'https://www.youtube.com/@nativafmbarradocorda',
     'twitter': 'https://www.instagram.com/nativafmbdc',
   };
-
+  
+  static const String versao = 'Versão 1.0.3'; // ou o número que quiser
+  
   static String linkVersao(String plataforma) =>
       'https://ez1fm.com/aplicativos/links.php?loja=$plataforma&app=nativa_bc';
 

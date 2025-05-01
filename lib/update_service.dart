@@ -70,6 +70,6 @@ Future<void> checkForUpdate(BuildContext context) async {
       );
     }
   } catch (e) {
-    debugPrint('Erro ao checar atualização: \$e');
+    debugPrint('Erro ao checar atualização: $e');
   }
 }
